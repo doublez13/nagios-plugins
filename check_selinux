@@ -9,22 +9,22 @@ SESTATUS=`$path_to_getenforce`
 
 case $SESTATUS in
   Enforcing)
-    echo "SELinux Enforcing"
+    echo "OK: SELinux Enforcing"
     exit 0
     ;;
 
   Permissive)
-    echo "SELinux Permissive"
+    echo "WARNING: SELinux Permissive"
     exit 1
     ;;
 
   Disabled)
-    echo "SELinux Disabled"
+    echo "CRITICAL: SELinux Disabled"
     exit 2
     ;;
 
   *)
-    echo "Failed to get SELinux state"
+    echo "UNKNOWN: Failed to get SELinux state"
     exit 3
     ;;
 esac
