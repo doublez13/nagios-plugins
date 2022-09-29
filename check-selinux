@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+  
+path_to_getenforce=$(which getenforce 2> /dev/null)
+if [ ! -x "$path_to_getenforce" ] ; then
+  echo 'getenforce not found in $PATH'
+  exit 3
+fi
+SESTATUS=`$path_to_getenforce`
+
+case $SESTATUS in
+  Enforcing)
+    echo "SELinux Enforcing"
+    exit 0
+    ;;
+
+  Permissive)
+    echo "SELinux Permissive"
+    exit 1
+    ;;
+
+  Disabled)
+    echo "SELinux Disabled"
+    exit 2
+    ;;
+
+  *)
+    echo "Failed to get SELinux state"
+    exit 3
+    ;;
+esac
