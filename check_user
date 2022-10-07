@@ -15,13 +15,13 @@ done
 
 if [ -z "$username" ]; then
   help
-  exit 1
+  exit 3
 fi
 
 uid_on_system=`id -u $username 2> /dev/null`
 if [ -z "$uid_on_system" ]; then
   echo "CRITICAL: user doens't exist on system"
-  exit 1
+  exit 2
 fi
 
 if [ ! -z "$expected_uid" ]; then
@@ -30,7 +30,7 @@ if [ ! -z "$expected_uid" ]; then
     exit 0
   fi
   echo "CRITICAL: User exists on system, but UID doesn't match expected UID"
-  exit 1
+  exit 2
 fi
 
 echo "OK: User exists on system"
