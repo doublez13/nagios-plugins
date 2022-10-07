@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+help () {
+  echo "check_user -u username [-U expected-uid]"
+}
+
+while getopts u:U:h flag
+do
+  case "${flag}" in
+    u) username=${OPTARG};;
+    U) expected_uid=${OPTARG};;
+    h) help && exit 0
+  esac
+done
+
+if [ -z "$username" ]; then
+  help
+  exit 1
+fi
+
+uid_on_system=`id -u $username 2> /dev/null`
+if [ -z "$uid_on_system" ]; then
+  echo "CRITICAL: user doens't exist on system"
+  exit 1
+fi
+
+if [ ! -z "$expected_uid" ]; then
+  if [ $expected_uid -eq $uid_on_system ]; then
+    echo "OK: User exists on system and UID matches"
+    exit 0
+  fi
+  echo "CRITICAL: User exists on system, but UID doesn't match expected UID"
+  exit 1
+fi
+
+echo "OK: User exists on system"
+exit 0
