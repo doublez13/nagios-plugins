@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+  
+path_to_mokutil=$(which mokutil 2> /dev/null)
+if [ ! -x "$path_to_mokutil" ] ; then
+  echo 'UNKNOWN: mokutil not found in $PATH'
+  exit 3
+fi
+SBSTATUS=`$path_to_mokutil --sb-state`
+
+case $SBSTATUS in
+  'SecureBoot enabled')
+    echo "OK: Secure Boot enabled"
+    exit 0
+    ;;
+
+  'SecureBoot disabled')
+    echo "CRITICAL: Secure Boot Disabled"
+    exit 2
+    ;;
+
+  *)
+    echo "UNKNOWN: Failed to get Secure Boot status"
+    exit 3
+    ;;
+esac
