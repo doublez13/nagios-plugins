@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+  
+help () {
+  echo "check_systemd [-s service]"
+}
+
+while getopts s:h flag
+do
+  case "${flag}" in
+    s) SERVICE=${OPTARG};;
+    h) help && exit 0
+  esac
+done
+
+path_to_systemctl=$(which systemctl 2> /dev/null)
+if [ ! -x "$path_to_systemctl" ] ; then
+  echo 'UNKNOWN: systemctl not found in $PATH'
+  exit 3
+fi
+
+#Check an individual service
+if [ ! -z "$SERVICE" ]; then
+  SERVICE_STATE=$(systemctl is-active $SERVICE)
+  case $SERVICE_STATE in
+    'active')
+      echo "OK: $SERVICE is active"
+      exit 0
+      ;;
+
+    'inactive')
+      echo "WARNING: $SERVICE not running or not found"
+      exit 1
+      ;;
+
+    'failed')
+      echo "CRITICAL: $SERVICE in a failed state"
+      exit 2
+      ;;
+
+    *)
+      echo "UNKNOWN: $SERVICE in an unknown state"
+      exit 3
+      ;;
+  esac
+fi
+
+#No service specified, check the state of the entire system
+STATE=$(systemctl is-system-running)
+case $STATE in
+  'running')
+    echo "OK: System is fully operational"
+    exit 0
+    ;;
+
+  'starting' | 'initializing' | 'degraded')
+    echo "CRITICAL: System is $STATE"
+    exit 2
+    ;;
+
+  'maintenance')
+    echo "CRITICAL: System is in $STATE"
+    exit 2
+    ;;
+
+  'stopping' | 'offline')
+    echo "CRITICAL: System is $STATE"
+    exit 2
+    ;;
+
+  *)
+    echo "UNKNOWN: System is $STATE"
+    exit 3
+    ;;
+esac
