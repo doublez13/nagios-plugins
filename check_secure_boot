@@ -1,21 +1,78 @@
 #!/usr/bin/env bash
-  
+
+help () {
+  echo "check_secure_boot -L"
+} 
+
+check_lockdown=false
+while getopts Lh flag
+do
+  case "${flag}" in
+    L) check_lockdown=true;;
+    h) help && exit 0
+  esac
+done 
+
+path_to_lockdown="/sys/kernel/security/lockdown"
 path_to_mokutil=$(which mokutil 2> /dev/null)
 if [ ! -x "$path_to_mokutil" ] ; then
   echo 'UNKNOWN: mokutil not found in $PATH'
   exit 3
 fi
-SBSTATUS=`$path_to_mokutil --sb-state`
 
-case $SBSTATUS in
+#Check valid Lockdown state
+LDSTATUS=""
+if [ "$check_lockdown" = true ] ; then
+  if [ -f "$path_to_lockdown" ] ; then
+    LDSTATUS=$(cat "$path_to_lockdown" | grep -o -P '(?<=\[).*(?=\])')
+    case "$LDSTATUS" in
+      'confidentiality');; 
+      'integrity');;
+      'none');;
+      *)
+        echo "UNKNOWN: Failed to get Lockdown status"
+        exit 3
+        ;;
+    esac
+  else
+    $LDSTATUS="none"
+  fi
+fi
+
+SBSTATUS=`$path_to_mokutil --sb-state`
+case "$SBSTATUS" in
   'SecureBoot enabled')
-    echo "OK: Secure Boot enabled"
-    exit 0
+    case "$LDSTATUS" in
+      '')
+        echo "OK: Secure Boot enabled"
+        exit 0
+        ;;
+      'confidentiality' | 'integrity')
+        echo "OK: Secure Boot enabled and Lockdown running in $LDSTATUS"
+        exit 0
+        ;;
+      'none')
+        echo "CRITICAL: Secure Boot enabled and Lockdown not running"
+        exit 2
+        ;;
+    esac
     ;;
 
   'SecureBoot disabled')
-    echo "CRITICAL: Secure Boot Disabled"
-    exit 2
+    case "$LDSTATUS" in
+      '')
+        echo "CRITICAL: Secure Boot disabled"
+        exit 2
+        ;;
+      'confidentiality' | 'integrity')
+        echo "CRITICAL: Secure Boot disabled and Lockdown running in $LDSTATUS"
+        exit 2
+        ;;
+      'none')
+        echo "CRITICAL: Secure Boot disabled and Lockdown not running"
+        exit 2
+        ;;
+    esac
     ;;
 
   *)
