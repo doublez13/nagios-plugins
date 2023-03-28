@@ -1,5 +1,4 @@
-# nagios-plugins
-Misc nagios plugins
+# Nagios Plugins
 
 * check_user -u username [-U expected-uid]
 * check_secure_boot [-L]
