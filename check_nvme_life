@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+help () {
+  echo "check_nvme_life -d drive"
+}
+
+while getopts d:h flag
+do
+  case "${flag}" in
+    d) DRIVE=${OPTARG};;
+    h) help && exit 0
+  esac
+done
+
+if [ -z "$DRIVE" ]; then
+  help
+  exit 3
+fi
+
+path_to_smartctl=$(which smartctl 2> /dev/null)
+if [ ! -x "$path_to_smartctl" ]; then
+  echo 'UNKNOWN: smartctl not found in $PATH'
+  exit 3
+fi
+if [ ! -e "$DRIVE" ]; then
+  echo 'UNKNOWN: drive not found'
+  exit 3
+fi
+
+#Quick and dirty check to see if drive responds
+#appropriately when queried as NVMe
+smartctl -d nvme -A $DRIVE > /dev/null 2>&1
+if [ $? -eq 2 ]; then
+  echo "UNKNOWN: error reading device information" 
+  exit 3
+fi
+
+PERCENT_USED=$(smartctl -A $DRIVE | grep -E "Percentage Used" | cut -d ":" -f 2 | tr -d ' %')
+DATA_WRITTEN=$(smartctl -A $DRIVE | grep -E "Data Units Written" | cut -d ":" -f 2 | tr -d ' %' | grep -o -P '(?<=\[).*(?=\])')
+if ((LIFE_USED<=50)); then
+    echo "OK: $PERCENT_USED% used. $DATA_WRITTEN written."
+    exit 0
+elif ((LIFE_USED>50 && LIFE_USED<=80)); then
+    echo "WARNING: $PERCENT_USED% used. $DATA_WRITTEN written."
+    exit 1
+else
+    echo "CRITICAL: $PERCENT_USED% used. $DATA_WRITTEN written."
+    exit 2
+fi
