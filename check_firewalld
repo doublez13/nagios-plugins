@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+help () {
+  echo "check_firewalld -i interface -p expected_policy]"
+}
+
+while getopts i:p:h flag
+do
+  case "${flag}" in
+    i) interface=${OPTARG};;
+    p) expected_policy=${OPTARG};;
+    h) help && exit 0
+  esac
+done
+
+if [ -z "$interface" ] || [ -z "$expected_policy" ]; then
+  help
+  exit 3
+fi
+
+firewall_cmd=$(which firewall-cmd 2> /dev/null)
+if [ ! -x "$firewall_cmd" ] ; then
+  echo 'UNKNOWN: firewall-cmd not found in $PATH'
+  exit 3
+fi
+
+state=$(firewall-cmd --state 2>&1)
+if [[ "$state" == "not running" ]]; then
+  echo "CRITICAL: Firewalld not running"
+  exit 2
+fi
+
+if [[ "$state" != "running" ]]; then
+  echo "UNKNOWN: Firewalld state not understood"
+  exit 3
+fi
+
+zone=$(firewall-cmd --get-zone-of-interface=$interface 2>&1)
+if [[ "$zone" == "no zone" ]]; then
+  echo "CRITICAL: No zone is defined for that interface"
+  exit 2
+fi
+
+policy=$(firewall-cmd --zone=$zone --get-target --permanent)
+if [[ "$policy" != "$expected_policy" ]]; then
+  echo "CRITICAL: $zone has policy: $policy. Expected: $expected_policy"
+  exit 2
+fi
+
+echo "OK: $zone has expected policy: $policy"
+exit 0
